@@ -114,3 +114,40 @@ resource "google_storage_bucket_iam_member" "tfstate_admin_apply" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.tf_apply.email}"
 }
+
+# ------------------------------------------------------------------------------
+# Least-Privilege Project IAM Bindings for Managed GCP Resources
+# (Pub/Sub, Secret Manager, BigQuery, Artifact Registry)
+# ------------------------------------------------------------------------------
+locals {
+  plan_project_roles = toset([
+    "roles/pubsub.viewer",
+    "roles/secretmanager.viewer",
+    "roles/secretmanager.secretAccessor",
+    "roles/bigquery.metadataViewer",
+    "roles/artifactregistry.reader",
+  ])
+
+  apply_project_roles = toset([
+    "roles/pubsub.admin",
+    "roles/secretmanager.admin",
+    "roles/bigquery.admin",
+    "roles/artifactregistry.admin",
+  ])
+}
+
+resource "google_project_iam_member" "tf_plan_resource_readers" {
+  for_each = local.plan_project_roles
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.tf_plan.email}"
+}
+
+resource "google_project_iam_member" "tf_apply_resource_admins" {
+  for_each = local.apply_project_roles
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.tf_apply.email}"
+}

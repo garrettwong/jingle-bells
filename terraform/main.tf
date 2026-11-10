@@ -1,3 +1,17 @@
+# Inspect the active GCP identity executing Terraform
+data "google_client_openid_userinfo" "caller" {}
+
+# Verify Terraform is executing under one of the dedicated GitHub WIF Service Accounts
+check "running_as_wif_service_account" {
+  assert {
+    condition = contains([
+      "jingle-bells-tf-plan@${var.project_id}.iam.gserviceaccount.com",
+      "jingle-bells-tf-apply@${var.project_id}.iam.gserviceaccount.com",
+    ], data.google_client_openid_userinfo.caller.email)
+    error_message = "Expected Terraform to run as a GitHub WIF Service Account, but active caller is '${data.google_client_openid_userinfo.caller.email}'."
+  }
+}
+
 # Read the protected GCS object via the WIF Service Account
 data "google_storage_bucket_object_content" "helloworld" {
   bucket = var.target_bucket
